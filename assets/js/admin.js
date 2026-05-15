@@ -13,6 +13,8 @@ const githubBranchInput = document.getElementById('github-branch');
 const githubTokenInput = document.getElementById('github-token');
 
 const validImageTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+const githubSettingsKey = 'furqan-admin-github-settings';
+let activePreviewUrl = null;
 
 const slugify = (text) => {
   return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
@@ -22,25 +24,66 @@ const setStatus = (message, type = 'info') => {
   if (!saveStatus) return;
   saveStatus.textContent = message;
   saveStatus.className = 'save-status';
-  if (type === 'error') saveStatus.classList.add('error');
-  if (type === 'success') saveStatus.classList.add('success');
+  saveStatus.classList.toggle('error', type === 'error');
+  saveStatus.classList.toggle('success', type === 'success');
 };
 
-const updatePreview = (metadata) => {
-  previewImage.innerHTML = metadata.image ? `<img src="${metadata.image}" alt="${metadata.title}">` : 'Preview image will appear here';
+const clearStatus = () => {
+  if (!saveStatus) return;
+  setTimeout(() => {
+    saveStatus.textContent = '';
+    saveStatus.className = 'save-status';
+  }, 5000);
+};
+
+const loadGitHubSettings = () => {
+  if (!window.localStorage) return;
+  try {
+    const saved = localStorage.getItem(githubSettingsKey);
+    if (!saved) return;
+    const settings = JSON.parse(saved);
+    githubOwnerInput.value = settings.owner || '';
+    githubRepoInput.value = settings.repo || '';
+    githubBranchInput.value = settings.branch || 'main';
+  } catch (error) {
+    console.warn('Unable to load GitHub settings', error);
+  }
+};
+
+const saveGitHubSettings = (owner, repo, branch) => {
+  if (!window.localStorage) return;
+  localStorage.setItem(githubSettingsKey, JSON.stringify({ owner, repo, branch }));
+};
+
+const revokePreviewUrl = () => {
+  if (activePreviewUrl) {
+    URL.revokeObjectURL(activePreviewUrl);
+    activePreviewUrl = null;
+  }
+};
+
+const updatePreview = (metadata, previewSrc = '') => {
+  revokePreviewUrl();
+  if (previewSrc) {
+    previewImage.innerHTML = `<img src="${previewSrc}" alt="${metadata.title || 'Preview image'}">`;
+  } else if (metadata.image) {
+    previewImage.innerHTML = `<img src="${metadata.image}" alt="${metadata.title || 'Preview image'}">`;
+  } else {
+    previewImage.textContent = 'Preview image will appear here';
+  }
+
   previewTitle.textContent = metadata.title || 'Title';
   previewCategory.textContent = metadata.category || 'Category';
   previewDescription.textContent = metadata.description || 'Description';
 };
 
 const getImageFile = () => {
-  const file = imageFileInput?.files?.[0];
-  return file ?? null;
+  return imageFileInput?.files?.[0] ?? null;
 };
 
 const getImagePath = (metadata, imageFile) => {
   if (imageFile) {
-    const extension = imageFile.name.split('.').pop();
+    const extension = imageFile.name.split('.').pop().toLowerCase();
     const fileName = `${metadata.id}.${extension}`;
     return `img/${fileName}`;
   }
@@ -57,14 +100,7 @@ const buildMetadata = () => {
   const slug = document.getElementById('slug').value.trim() || slugify(title);
   const id = slug || `photo-${Date.now()}`;
 
-  return {
-    id,
-    title,
-    category,
-    description,
-    image,
-    date,
-  };
+  return { id, title, category, description, image, date };
 };
 
 const toBase64 = (file) => {
@@ -72,17 +108,14 @@ const toBase64 = (file) => {
     const reader = new FileReader();
     reader.onload = () => {
       const result = reader.result;
-      const base64 = result.split(',')[1];
-      resolve(base64);
+      resolve(result.split(',')[1]);
     };
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
 };
 
-const encodeUtf8ToBase64 = (str) => {
-  return btoa(unescape(encodeURIComponent(str)));
-};
+const encodeUtf8ToBase64 = (str) => btoa(unescape(encodeURIComponent(str)));
 
 const fetchGitHubFile = async (owner, repo, path, branch, token) => {
   const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}?ref=${branch}`, {
@@ -98,11 +131,7 @@ const fetchGitHubFile = async (owner, repo, path, branch, token) => {
 };
 
 const putGitHubFile = async (owner, repo, path, contentBase64, message, branch, token, sha) => {
-  const body = {
-    message,
-    content: contentBase64,
-    branch,
-  };
+  const body = { message, content: contentBase64, branch };
   if (sha) body.sha = sha;
 
   const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
@@ -146,45 +175,74 @@ const updatePhotosJsonOnGitHub = async (owner, repo, branch, token, entry) => {
   await putGitHubFile(owner, repo, 'data/photos.json', updatedJson, `Update photos.json for ${entry.title}`, branch, token, fileInfo.sha);
 };
 
+const getPreviewSource = (metadata, imageFile) => {
+  if (imageFile) {
+    const previewUrl = URL.createObjectURL(imageFile);
+    activePreviewUrl = previewUrl;
+    return previewUrl;
+  }
+
+  return metadata.image || '';
+};
+
 const buildAndPreview = () => {
   const metadata = buildMetadata();
   const file = getImageFile();
   metadata.image = getImagePath(metadata, file) || metadata.image;
-  updatePreview(metadata);
+  const previewSrc = getPreviewSource(metadata, file);
+  updatePreview(metadata, previewSrc);
   return metadata;
+};
+
+const setFormDisabled = (disabled) => {
+  Array.from(photoForm.elements).forEach((element) => {
+    element.disabled = disabled;
+  });
+};
+
+const validateMetadata = (metadata, file) => {
+  if (!metadata.title || !metadata.category) {
+    throw new Error('Title and category are required.');
+  }
+
+  if (!metadata.image && !file) {
+    throw new Error('Provide an image URL or upload a JPG/PNG file.');
+  }
 };
 
 photoForm?.addEventListener('submit', (event) => {
   event.preventDefault();
-  const metadata = buildAndPreview();
-
-  if (!metadata.title || !metadata.category) {
-    setStatus('Title and category are required.', 'error');
-    return;
+  try {
+    const metadata = buildAndPreview();
+    validateMetadata(metadata, getImageFile());
+    navigator.clipboard?.writeText(JSON.stringify(metadata, null, 2)).catch(() => {});
+    setStatus('Photo metadata previewed. JSON copied to clipboard.', 'success');
+  } catch (error) {
+    setStatus(error.message, 'error');
+  } finally {
+    clearStatus();
   }
-
-  if (!metadata.image) {
-    setStatus('Provide an image URL or upload a JPG/PNG file.', 'error');
-    return;
-  }
-
-  const jsonText = JSON.stringify(metadata, null, 2);
-  navigator.clipboard?.writeText(jsonText).catch(() => {});
-  setStatus('Photo metadata generated. JSON copied to clipboard.', 'success');
 });
 
 downloadJson?.addEventListener('click', () => {
-  const metadata = buildAndPreview();
-  const blob = new Blob([JSON.stringify(metadata, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = `${metadata.id}.json`;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-  setStatus('JSON snippet downloaded.', 'success');
+  try {
+    const metadata = buildAndPreview();
+    validateMetadata(metadata, getImageFile());
+    const blob = new Blob([JSON.stringify(metadata, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${metadata.id}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    setStatus('JSON snippet downloaded.', 'success');
+  } catch (error) {
+    setStatus(error.message, 'error');
+  } finally {
+    clearStatus();
+  }
 });
 
 saveGithub?.addEventListener('click', async () => {
@@ -195,23 +253,17 @@ saveGithub?.addEventListener('click', async () => {
   const branch = githubBranchInput?.value.trim() || 'main';
   const token = githubTokenInput?.value.trim();
 
-  if (!owner || !repo || !token) {
-    setStatus('GitHub owner, repo, and token are required to save.', 'error');
-    return;
-  }
-
-  if (!metadata.title || !metadata.category) {
-    setStatus('Title and category are required.', 'error');
-    return;
-  }
-
-  if (!metadata.image && !file) {
-    setStatus('Provide an image URL or upload a JPG/PNG file.', 'error');
-    return;
-  }
-
   try {
+    if (!owner || !repo || !token) {
+      throw new Error('GitHub owner, repo, and token are required to save.');
+    }
+
+    validateMetadata(metadata, file);
+    saveGitHubSettings(owner, repo, branch);
+
     setStatus('Saving to GitHub...');
+    setFormDisabled(true);
+
     let imagePath = metadata.image;
     if (file) {
       imagePath = await uploadImageToGitHub(owner, repo, branch, token, file, metadata);
@@ -224,16 +276,25 @@ saveGithub?.addEventListener('click', async () => {
 
     await updatePhotosJsonOnGitHub(owner, repo, branch, token, metadata);
     setStatus('Photo and metadata saved to GitHub successfully.', 'success');
+    const savedOwner = owner;
+    const savedRepo = repo;
+    const savedBranch = branch;
+    photoForm.reset();
+    githubOwnerInput.value = savedOwner;
+    githubRepoInput.value = savedRepo;
+    githubBranchInput.value = savedBranch;
+    githubTokenInput.value = '';
+    updatePreview({ title: 'Title', category: 'Category', description: 'Description', image: '' });
   } catch (error) {
     setStatus(error.message || 'GitHub save failed.', 'error');
+  } finally {
+    setFormDisabled(false);
+    clearStatus();
   }
 });
 
 photoForm?.addEventListener('input', buildAndPreview);
+imageFileInput?.addEventListener('change', buildAndPreview);
 
-updatePreview({
-  title: 'Title',
-  category: 'Category',
-  description: 'Description',
-  image: '',
-});
+loadGitHubSettings();
+updatePreview({ title: 'Title', category: 'Category', description: 'Description', image: '' });

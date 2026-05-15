@@ -12,8 +12,10 @@ This repository contains a static photography portfolio built for GitHub with:
 ## Usage
 
 1. Open `index.html` or `gallery.html` using a local web server or Live Server in VS Code.
-2. Use `admin.html` to generate new photo metadata and preview entries.
-3. Add photos locally by running the PowerShell helper:
+2. Use `admin.html` to generate new photo metadata, preview entries, upload the image file, and save the update directly to GitHub.
+3. The admin form now remembers the GitHub owner/repo/branch settings for faster repeated uploads.
+
+If you prefer a local workflow, you can still use the PowerShell helper:
 
 ```powershell
 Set-Location d:\furqan

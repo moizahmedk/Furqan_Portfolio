@@ -53,8 +53,8 @@
           </label>
           <label>
             Upload image file
-            <input type="file" id="image-file" accept="image/png,image/jpeg" accept=".png,.jpg,.jpeg">
-            <small>Supports JPG, JPEG, PNG</small>
+            <input type="file" id="image-file" accept=".png,.jpg,.jpeg">
+            <small>Supports JPG, JPEG, PNG; choose a file to upload or paste an image URL.</small>
           </label>
           <label>
             Optional photo page slug
@@ -76,10 +76,11 @@
           <label>
             GitHub token
             <input type="password" id="github-token" autocomplete="off" placeholder="Personal access token with repo scope">
+            <small>The token is used only for this save action and is not stored in the repo.</small>
           </label>
           <div class="admin-actions">
-            <button type="submit" class="btn btn-primary">Generate metadata</button>
-            <button type="button" id="save-github" class="btn btn-primary">Save directly to GitHub</button>
+            <button type="submit" class="btn btn-primary">Preview metadata</button>
+            <button type="button" id="save-github" class="btn btn-primary">Upload image and save to GitHub</button>
             <button type="button" id="download-json" class="btn btn-secondary">Download JSON snippet</button>
           </div>
           <div id="save-status" class="save-status"></div>
@@ -97,12 +98,12 @@
           <div class="admin-notes">
             <h3>How to publish</h3>
             <ol>
-              <li>Provide title, category, description, and either image URL or file upload.</li>
+              <li>Enter title, category, description, and choose an image file or image URL.</li>
               <li>Enter your GitHub owner, repository, branch, and personal access token.</li>
-              <li>Click <strong>Save directly to GitHub</strong> to upload the image and update <code>data/photos.json</code>.</li>
-              <li>If you only want metadata, click <strong>Generate metadata</strong> and paste JSON into <code>data/photos.json</code>.</li>
+              <li>Click <strong>Upload image and save to GitHub</strong> to push the image and update <code>data/photos.json</code>.</li>
+              <li>If you only need metadata before saving, click <strong>Preview metadata</strong> or <strong>Download JSON snippet</strong>.</li>
             </ol>
-            <p class="note">This page can save content directly to GitHub, so you do not need local storage for image data if you upload files here.</p>
+            <p class="note">The form remembers repository settings and previews your image instantly, so image addition stays smooth.</p>
           </div>
         </div>
       </div>
