@@ -414,6 +414,28 @@ main {
   font-size: 14px;
 }
 
+.save-status {
+  margin-top: 16px;
+  font-size: 14px;
+  color: #fff;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: rgba(212,168,67,.1);
+  border: 1px solid rgba(212,168,67,.2);
+}
+
+.save-status.error {
+  background: rgba(255,94,87,.12);
+  border-color: rgba(255,94,87,.3);
+  color: #ffb3b0;
+}
+
+.save-status.success {
+  background: rgba(46,185,131,.12);
+  border-color: rgba(46,185,131,.3);
+  color: #c7ffdf;
+}
+
 code {
   background: rgba(236,231,218,.08);
   padding: 3px 6px;

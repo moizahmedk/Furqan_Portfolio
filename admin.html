@@ -48,17 +48,41 @@
             <input type="date" id="date">
           </label>
           <label>
-            Image URL
-            <input type="url" id="image" required placeholder="e.g. https://...">
+            Image URL (optional if uploading a file)
+            <input type="url" id="image" placeholder="e.g. https://...">
+          </label>
+          <label>
+            Upload image file
+            <input type="file" id="image-file" accept="image/png,image/jpeg" accept=".png,.jpg,.jpeg">
+            <small>Supports JPG, JPEG, PNG</small>
           </label>
           <label>
             Optional photo page slug
             <input type="text" id="slug" placeholder="leave empty to auto-generate">
           </label>
+          <hr>
+          <label>
+            GitHub owner
+            <input type="text" id="github-owner" placeholder="e.g. moizahmedk">
+          </label>
+          <label>
+            GitHub repository
+            <input type="text" id="github-repo" placeholder="e.g. Furqan_Portfolio">
+          </label>
+          <label>
+            Branch
+            <input type="text" id="github-branch" value="main" placeholder="main">
+          </label>
+          <label>
+            GitHub token
+            <input type="password" id="github-token" autocomplete="off" placeholder="Personal access token with repo scope">
+          </label>
           <div class="admin-actions">
             <button type="submit" class="btn btn-primary">Generate metadata</button>
+            <button type="button" id="save-github" class="btn btn-primary">Save directly to GitHub</button>
             <button type="button" id="download-json" class="btn btn-secondary">Download JSON snippet</button>
           </div>
+          <div id="save-status" class="save-status"></div>
         </form>
 
         <div class="admin-preview">
@@ -73,12 +97,12 @@
           <div class="admin-notes">
             <h3>How to publish</h3>
             <ol>
-              <li>Use the form to generate new photo metadata.</li>
-              <li>Download the JSON snippet or copy the previewed entry.</li>
-              <li>Paste the new entry into <code>data/photos.json</code>.</li>
-              <li>Optionally run <code>scripts/add-photo.ps1</code> to add a local image and push changes.</li>
+              <li>Provide title, category, description, and either image URL or file upload.</li>
+              <li>Enter your GitHub owner, repository, branch, and personal access token.</li>
+              <li>Click <strong>Save directly to GitHub</strong> to upload the image and update <code>data/photos.json</code>.</li>
+              <li>If you only want metadata, click <strong>Generate metadata</strong> and paste JSON into <code>data/photos.json</code>.</li>
             </ol>
-            <p class="note">Because this is a static portfolio, browser save access is limited. Use the PowerShell helper for direct GitHub commits and image additions.</p>
+            <p class="note">This page can save content directly to GitHub, so you do not need local storage for image data if you upload files here.</p>
           </div>
         </div>
       </div>
