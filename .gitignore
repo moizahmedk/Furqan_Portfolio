@@ -1,0 +1,12 @@
+# Ignore system files
+.DS_Store
+Thumbs.db
+
+# Ignore VS Code workspace files
+.vscode/
+
+# Ignore temporary logs
+*.log
+
+# Ignore archive files
+*.zip
