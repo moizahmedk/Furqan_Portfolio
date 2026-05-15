@@ -1,5 +1,8 @@
+
 const galleryGrid = document.getElementById('gallery-grid');
 const heroPreview = document.getElementById('hero-preview');
+let heroPhotos = [];
+let heroIndex = 0;
 
 const createCard = (photo) => {
   const card = document.createElement('article');
@@ -18,14 +21,38 @@ const createCard = (photo) => {
   return card;
 };
 
+const renderHeroSlide = (photo) => {
+  if (!heroPreview) return;
+  heroPreview.innerHTML = `
+    <div class="hero-slide">
+      <img src="${photo.image}" alt="${photo.title}">
+      <div class="hero-slide-copy">
+        <span class="eyebrow">${photo.category}</span>
+        <h3>${photo.title}</h3>
+        <p>${photo.description}</p>
+        <a href="photo.html?id=${photo.id}" class="btn btn-secondary">Explore story</a>
+      </div>
+    </div>
+  `;
+};
+
+const startHeroRotation = (photos) => {
+  if (!photos.length || !heroPreview) return;
+  heroPhotos = photos;
+  renderHeroSlide(heroPhotos[heroIndex]);
+  setInterval(() => {
+    heroIndex = (heroIndex + 1) % heroPhotos.length;
+    renderHeroSlide(heroPhotos[heroIndex]);
+  }, 7000);
+};
+
 fetch('data/photos.json')
   .then((response) => response.json())
   .then((photos) => {
-    const sorted = photos.slice().sort((a, b) => a.date < b.date ? 1 : -1);
+    const sorted = photos.slice().sort((a, b) => (a.date < b.date ? 1 : -1));
     sorted.slice(0, 6).forEach((photo) => galleryGrid.appendChild(createCard(photo)));
-    const heroPhoto = sorted[0];
-    if (heroPhoto && heroPreview) {
-      heroPreview.innerHTML = `<img src="${heroPhoto.image}" alt="${heroPhoto.title}">`;
+    if (sorted.length) {
+      startHeroRotation(sorted.slice(0, 4));
     }
   })
   .catch(() => {
